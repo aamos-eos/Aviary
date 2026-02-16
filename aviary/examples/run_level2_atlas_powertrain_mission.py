@@ -18,6 +18,10 @@ import aviary.api as av
 from aviary.models.engines.propulsion.systems.parallel_hybrid import (
     ParallelHybridElectricPropulsionSystem,
 )
+from aviary.models.engines.propulsion.battery.battery_data import BatteryData
+from aviary.models.engines.propulsion.battery.battery_empirical_power import (
+    EmpiricalBatteryPower,
+)
 from aviary.models.missions.height_energy_default import phase_info as default_phase_info
 from aviary.subsystems.propulsion.propulsion_builder import PropulsionBuilder
 from aviary.utils.aviary_values import AviaryValues
@@ -413,80 +417,165 @@ class AtlasMissionPropulsionBuilder(PropulsionBuilder):
         return {}
 
 
-def _build_phase_info_with_throttle_control():
-    phase_info = copy.deepcopy(default_phase_info)
-
-    # Use a propeller-compatible mission envelope and let Dymos control throttle.
-    phase_info["climb"]["user_options"]["mach_final"] = (0.35, "unitless")
-    phase_info["climb"]["user_options"]["mach_bounds"] = ((0.18, 0.40), "unitless")
-    phase_info["climb"]["user_options"]["altitude_final"] = (12000.0, "ft")
-    phase_info["climb"]["user_options"]["altitude_bounds"] = ((0.0, 15000.0), "ft")
-    # Make climb throttle an explicit phase input (control), not optimizer-driven.
-    phase_info["climb"]["user_options"]["throttle_enforcement"] = "control"
-    phase_info["climb"]["user_options"]["throttle_optimize"] = False
-    phase_info["climb"]["user_options"]["throttle_initial"] = (0.65, "unitless")
-    phase_info["climb"]["user_options"]["throttle_final"] = (0.65, "unitless")
-
-    phase_info["cruise"]["user_options"]["mach_initial"] = (0.35, "unitless")
-    phase_info["cruise"]["user_options"]["mach_final"] = (0.35, "unitless")
-    phase_info["cruise"]["user_options"]["mach_bounds"] = ((0.30, 0.40), "unitless")
-    phase_info["cruise"]["user_options"]["altitude_initial"] = (12000.0, "ft")
-    phase_info["cruise"]["user_options"]["altitude_final"] = (12000.0, "ft")
-    phase_info["cruise"]["user_options"]["altitude_bounds"] = ((9000.0, 15000.0), "ft")
-    # Let Aviary solve throttle in cruise/descent.
-    phase_info["cruise"]["user_options"]["throttle_enforcement"] = "path_constraint"
-
-    phase_info["descent"]["user_options"]["mach_initial"] = (0.35, "unitless")
-    phase_info["descent"]["user_options"]["mach_final"] = (0.20, "unitless")
-    phase_info["descent"]["user_options"]["mach_bounds"] = ((0.18, 0.40), "unitless")
-    phase_info["descent"]["user_options"]["altitude_initial"] = (12000.0, "ft")
-    phase_info["descent"]["user_options"]["altitude_final"] = (500.0, "ft")
-    phase_info["descent"]["user_options"]["altitude_bounds"] = ((0.0, 15000.0), "ft")
-    phase_info["descent"]["user_options"]["throttle_enforcement"] = "path_constraint"
-
-    phase_info["post_mission"]["target_range"] = (250.0, "nmi")
-
-    return phase_info
+def _knots_to_mach(knots):
+    """Approximate TAS in knots to Mach for phase initialization."""
+    return float(np.clip(knots / 661.0, 0.12, 0.45))
 
 
-def _set_reasonable_initial_guesses(prob):
-    """Set explicit mission guesses so run_model has non-trivial phase durations/range."""
-    climb = prob.model.traj._phases["climb"]
-    cruise = prob.model.traj._phases["cruise"]
-    descent = prob.model.traj._phases["descent"]
+def _build_atlas_14_phase_info():
+    """
+    Build a 14-phase payload/range-style mission profile using E180 altitude/speed intent.
 
-    # Time in seconds (roughly consistent with default height-energy example scales).
-    climb.set_time_val(initial=0.0, duration=64.0 * 60.0, units="s")
-    cruise.set_time_val(initial=64.0 * 60.0, duration=70.0 * 60.0, units="s")
-    descent.set_time_val(initial=134.0 * 60.0, duration=30.0 * 60.0, units="s")
+    Excludes taxi, takeoff, and reserve_taxi_in as requested.
+    """
+    # altitude/speed intent from aviary/models/aircraft/e180/pr_mission.py
+    phase_defs = {
+        "climb_e": {"h0_ft": 35.0, "h1_ft": 3000.0, "tas_kn": 180.0, "dur_min": 12.0},
+        "climb_hy": {"h0_ft": 3000.0, "h1_ft": 10000.0, "tas_kn": 180.0, "dur_min": 18.0},
+        "cruise_1": {"h0_ft": 10000.0, "h1_ft": 10000.0, "tas_kn": 235.0, "dur_min": 20.0},
+        "cruise_2": {"h0_ft": 10000.0, "h1_ft": 10000.0, "tas_kn": 235.0, "dur_min": 20.0},
+        "descent": {"h0_ft": 10000.0, "h1_ft": 1500.0, "tas_kn": 180.0, "dur_min": 15.0},
+        "circuit": {"h0_ft": 1500.0, "h1_ft": 1500.0, "tas_kn": 155.0, "dur_min": 3.0},
+        "approach": {"h0_ft": 1500.0, "h1_ft": 50.0, "tas_kn": 130.0, "dur_min": 6.0},
+        "reserve_go_around": {"h0_ft": 0.0, "h1_ft": 3500.0, "tas_kn": 130.0, "dur_min": 8.0},
+        "reserve_climb": {"h0_ft": 3500.0, "h1_ft": 8000.0, "tas_kn": 180.0, "dur_min": 10.0},
+        "reserve_cruise": {"h0_ft": 8000.0, "h1_ft": 8000.0, "tas_kn": 170.0, "dur_min": 20.0},
+        "reserve_descent": {"h0_ft": 8000.0, "h1_ft": 1500.0, "tas_kn": 180.0, "dur_min": 10.0},
+        "reserve_circuit": {"h0_ft": 1500.0, "h1_ft": 1500.0, "tas_kn": 155.0, "dur_min": 3.0},
+        "reserve_approach": {"h0_ft": 1500.0, "h1_ft": 50.0, "tas_kn": 120.0, "dur_min": 6.0},
+        "holding_cruise": {"h0_ft": 1500.0, "h1_ft": 1500.0, "tas_kn": 165.0, "dur_min": 30.0},
+    }
+    phase_sequence = list(phase_defs.keys())
 
-    # Controls (phase endpoints).
-    climb.set_control_val("mach", vals=[0.20, 0.35], time_vals=[-1, 1], units="unitless")
-    cruise.set_control_val("mach", vals=[0.35, 0.35], time_vals=[-1, 1], units="unitless")
-    descent.set_control_val("mach", vals=[0.35, 0.20], time_vals=[-1, 1], units="unitless")
+    phase_info = {"post_mission": copy.deepcopy(default_phase_info["post_mission"])}
+    phase_plan = {}
 
-    climb.set_control_val("altitude", vals=[0.0, 12000.0], time_vals=[-1, 1], units="ft")
-    cruise.set_control_val("altitude", vals=[12000.0, 12000.0], time_vals=[-1, 1], units="ft")
-    descent.set_control_val("altitude", vals=[12000.0, 500.0], time_vals=[-1, 1], units="ft")
+    throttle_input_phases = {
+        "climb_e",
+        "climb_hy",
+        "reserve_go_around",
+        "reserve_climb",
+    }
 
-    # Climb throttle is an explicit control input for this script.
-    climb.set_control_val("throttle", vals=[0.65, 0.65], time_vals=[-1, 1], units="unitless")
+    for phase_name in phase_sequence:
+        cfg = phase_defs[phase_name]
+        h0_ft = cfg["h0_ft"]
+        h1_ft = cfg["h1_ft"]
+        mach = _knots_to_mach(cfg["tas_kn"])
+        mach_bounds = (max(0.12, mach - 0.03), min(0.45, mach + 0.03))
+        alt_lo = max(0.0, min(h0_ft, h1_ft) - 500.0)
+        alt_hi = max(h0_ft, h1_ft) + 500.0
 
-    # Mass state guess.
-    climb.set_state_val("mass", vals=[170000.0, 166000.0], units="lbm")
-    cruise.set_state_val("mass", vals=[166000.0, 160000.0], units="lbm")
-    descent.set_state_val("mass", vals=[160000.0, 158000.0], units="lbm")
+        if h1_ft > h0_ft + 1.0:
+            template = copy.deepcopy(default_phase_info["climb"])
+        elif h1_ft < h0_ft - 1.0:
+            template = copy.deepcopy(default_phase_info["descent"])
+        else:
+            template = copy.deepcopy(default_phase_info["cruise"])
+
+        uopt = template["user_options"]
+        uopt["mach_initial"] = (mach, "unitless")
+        uopt["mach_final"] = (mach, "unitless")
+        uopt["mach_bounds"] = (mach_bounds, "unitless")
+        uopt["altitude_initial"] = (h0_ft, "ft")
+        uopt["altitude_final"] = (h1_ft, "ft")
+        uopt["altitude_bounds"] = ((alt_lo, alt_hi), "ft")
+        if phase_name in throttle_input_phases:
+            # Atlas convention: throttle in climb phases is provided as a control input.
+            uopt["throttle_enforcement"] = "control"
+            uopt["throttle_optimize"] = False
+            uopt["throttle_initial"] = (0.65, "unitless")
+            uopt["throttle_final"] = (0.65, "unitless")
+        else:
+            uopt["throttle_enforcement"] = "path_constraint"
+
+        phase_info[phase_name] = template
+        phase_plan[phase_name] = {
+            "mach_initial": mach,
+            "mach_final": mach,
+            "altitude_initial_ft": h0_ft,
+            "altitude_final_ft": h1_ft,
+            "duration_min": cfg["dur_min"],
+        }
+
+    phase_info["post_mission"]["target_range"] = (275.0, "nmi")
+    return phase_info, phase_sequence, phase_plan
 
 
-def _confirm_atlas_powertrain_active(prob):
+def _set_reasonable_initial_guesses(prob, phase_sequence, phase_plan):
+    """Set mission guesses from the 14-phase altitude/speed definitions."""
+    t0_s = 0.0
+    mass_start = 170000.0
+    total_mass_drop = 12000.0
+    dm = total_mass_drop / max(1, len(phase_sequence))
+
+    throttle_input_phases = {
+        "climb_e",
+        "climb_hy",
+        "reserve_go_around",
+        "reserve_climb",
+    }
+
+    for i, phase_name in enumerate(phase_sequence):
+        phase = prob.model.traj._phases[phase_name]
+        plan = phase_plan[phase_name]
+        duration_s = float(plan["duration_min"] * 60.0)
+
+        phase.set_time_val(initial=t0_s, duration=duration_s, units="s")
+        t0_s += duration_s
+
+        try:
+            phase.set_control_val(
+                "mach",
+                vals=[plan["mach_initial"], plan["mach_final"]],
+                time_vals=[-1, 1],
+                units="unitless",
+            )
+        except Exception:
+            pass
+
+        try:
+            phase.set_control_val(
+                "altitude",
+                vals=[plan["altitude_initial_ft"], plan["altitude_final_ft"]],
+                time_vals=[-1, 1],
+                units="ft",
+            )
+        except Exception:
+            pass
+
+        if phase_name in throttle_input_phases:
+            try:
+                phase.set_control_val(
+                    "throttle",
+                    vals=[0.65, 0.65],
+                    time_vals=[-1, 1],
+                    units="unitless",
+                )
+            except Exception:
+                pass
+
+        m0 = mass_start - i * dm
+        m1 = m0 - dm
+        try:
+            phase.set_state_val("mass", vals=[m0, m1], units="lbm")
+        except Exception:
+            pass
+
+
+def _confirm_atlas_powertrain_active(prob, phase_sequence):
     """
     Verify the mission ODE is using the Atlas powertrain by reading a variable that only
     exists in the custom Atlas propulsion mission group.
     """
-    candidate_paths = [
-        "traj.climb.rhs_all.solver_sub.propulsion.atlas_ptrain.total_thrust",
-        "traj.climb.rhs_all.propulsion.atlas_ptrain.total_thrust",
-    ]
+    candidate_paths = []
+    for phase_name in phase_sequence:
+        candidate_paths.extend(
+            [
+                f"traj.{phase_name}.rhs_all.solver_sub.propulsion.atlas_ptrain.total_thrust",
+                f"traj.{phase_name}.rhs_all.propulsion.atlas_ptrain.total_thrust",
+            ]
+        )
 
     last_exc = None
     for path in candidate_paths:
@@ -505,12 +594,146 @@ def _confirm_atlas_powertrain_active(prob):
     ) from last_exc
 
 
+def _report_battery_soc(prob):
+    """Report final SOC from mission timeseries if battery subsystem is present."""
+    candidate_paths = [
+        f"traj.descent.timeseries.{Dynamic.Vehicle.BATTERY_STATE_OF_CHARGE}",
+        f"traj.cruise.timeseries.{Dynamic.Vehicle.BATTERY_STATE_OF_CHARGE}",
+        f"traj.climb.timeseries.{Dynamic.Vehicle.BATTERY_STATE_OF_CHARGE}",
+    ]
+
+    for path in candidate_paths:
+        try:
+            soc = np.atleast_1d(prob.get_val(path))
+            print(f"Battery final SOC ({path}): {float(soc[-1]):.4f}")
+            return
+        except Exception:
+            continue
+
+    print("Battery SOC not found in mission timeseries.")
+
+
+def _run_empirical_battery_model(
+    prob,
+    phases=("climb", "cruise", "descent"),
+    num_props=4,
+    num_batt_strings=4,
+    battery_datasheet_name="MolicelP80X_module210s8p_4grp14_hiOCV_hiIR_xfeed_per_side_260105",
+):
+    """
+    Run Atlas empirical battery model using mission electric power output from Aviary.
+
+    This intentionally calls the same battery model used in Atlas workflows
+    (aviary/models/engines/propulsion/battery/battery_empirical_power.py).
+    """
+    phase_names = list(phases)
+    phase_durations_h = []
+    p_total_kw = []
+    altitude_ft = []
+
+    for phase in phase_names:
+        time_h = np.atleast_1d(prob.get_val(f"traj.{phase}.timeseries.time", units="h")).ravel()
+        p_kw = np.atleast_1d(
+            prob.get_val(
+                f"traj.{phase}.timeseries.{Dynamic.Vehicle.Propulsion.ELECTRIC_POWER_IN_TOTAL}",
+                units="kW",
+            )
+        ).ravel()
+        alt_ft = np.atleast_1d(
+            prob.get_val(f"traj.{phase}.timeseries.{Dynamic.Mission.ALTITUDE}", units="ft")
+        ).ravel()
+
+        phase_durations_h.append(float(time_h[-1] - time_h[0]))
+        p_total_kw.append(p_kw)
+        altitude_ft.append(alt_ft)
+
+    p_total_kw = np.concatenate(p_total_kw)
+    altitude_ft = np.concatenate(altitude_ft)
+    mission_duration_h = float(np.sum(phase_durations_h))
+
+    # EmpiricalBatteryPower integrator uses Simpson and requires odd num_nodes.
+    if p_total_kw.size % 2 == 0:
+        p_total_kw = np.concatenate([p_total_kw, p_total_kw[-1:]])
+        altitude_ft = np.concatenate([altitude_ft, altitude_ft[-1:]])
+
+    total_nodes = int(p_total_kw.size)
+
+    # Atlas battery model expects per-motor electric demand (nm, num_nodes). Split total evenly.
+    p_train_elec_kw = np.tile(p_total_kw / float(num_props), (num_props, 1))
+
+    bat_data = BatteryData.get_data(
+        bat_filename=(
+            "aviary/models/engines/propulsion/empirical_data/"
+            + battery_datasheet_name
+            + ".xlsx"
+        ),
+        cell_sheetname="BOL_cell_fct_CRate",
+        config_sheetname="battery_config",
+    )
+
+    n_str = int(num_batt_strings)
+    if hasattr(bat_data, "n_str"):
+        n_str = int(bat_data.n_str)
+
+    batt_prob = om.Problem(reports=False)
+    ivc = om.IndepVarComp()
+    ivc.add_output("p_train_elec", val=p_train_elec_kw, units="kW")
+    ivc.add_output("eta_parc", val=np.ones(total_nodes), units=None)
+    ivc.add_output("altitude", val=altitude_ft, units="ft")
+    ivc.add_output("disa", val=np.zeros(total_nodes), units="degC")
+    ivc.add_output("cell_capacity", val=bat_data.cell_Ah_capacity, units="A*h")
+    ivc.add_output("m_cell", val=bat_data.m_cell, units="kg")
+    ivc.add_output("cp_cell", val=bat_data.cp_cell, units="J/kg/K")
+    ivc.add_output("q_cool_bat", val=25.0 * np.ones((n_str, total_nodes)), units="kW")
+    ivc.add_output("soc_initial", val=0.98, units=None)
+    ivc.add_output("n_series_per_str", val=bat_data.n_series_per_str, units=None)
+    ivc.add_output("n_parallel_per_str", val=bat_data.n_parallel_per_str, units=None)
+    ivc.add_output("mission_duration", val=mission_duration_h, units="h")
+
+    batt_prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    batt_prob.model.add_subsystem(
+        "batt_emp",
+        EmpiricalBatteryPower(
+            num_nodes=total_nodes,
+            nm=num_props,
+            n_str=n_str,
+            phases=["mission"],
+            feeder_mode="independent",
+            active_strings=None,
+            battery_datasheet_name=battery_datasheet_name,
+        ),
+        promotes=["*"],
+    )
+
+    for i in range(n_str):
+        batt_prob.model.connect("mission_duration", f"soc_integrator_str{i}.duration")
+        batt_prob.model.connect(
+            "soc_initial",
+            f"soc_integrator_str{i}.soc_initial",
+        )
+
+    batt_prob.setup()
+    batt_prob.run_model()
+
+    soc = np.asarray(batt_prob.get_val("soc"))
+    v_bat = np.asarray(batt_prob.get_val("v_bat", units="V"))
+    final_soc = soc[:, -1] if soc.ndim == 2 else np.array([float(np.ravel(soc)[-1])])
+    print("EmpiricalBatteryPower final SOC per string:", np.array2string(final_soc, precision=4))
+    print(
+        "EmpiricalBatteryPower min battery voltage (V):",
+        float(np.min(v_bat)),
+    )
+
+    return {"soc": soc, "v_bat": v_bat}
+
+
 if __name__ == "__main__":
     PLOT_MISSION = True
     PLOT_N2 = True
     USE_CORE_PREMISSION_PROPULSION = False
+    RUN_EMPIRICAL_BATTERY_MODEL = True
 
-    phase_info = _build_phase_info_with_throttle_control()
+    phase_info, mission_phases, phase_plan = _build_atlas_14_phase_info()
 
     prob = av.AviaryProblem()
     prob.load_inputs(
@@ -549,7 +772,7 @@ if __name__ == "__main__":
     prob.add_design_variables()
     prob.add_objective()
     prob.setup()
-    _set_reasonable_initial_guesses(prob)
+    _set_reasonable_initial_guesses(prob, mission_phases, phase_plan)
     run_start = time.perf_counter()
     prob.run_aviary_problem(
         suppress_solver_print=True,
@@ -558,12 +781,14 @@ if __name__ == "__main__":
     )
     run_elapsed = time.perf_counter() - run_start
     print(f"Mission simulation runtime: {run_elapsed:.2f} s")
-    _confirm_atlas_powertrain_active(prob)
+    _confirm_atlas_powertrain_active(prob, mission_phases)
+    if RUN_EMPIRICAL_BATTERY_MODEL:
+        _run_empirical_battery_model(prob, phases=tuple(mission_phases), num_props=num_props)
 
     if PLOT_MISSION:
         plot_atlas_aviary_mission(
             prob,
-            phases=("climb", "cruise", "descent"),
+            phases=tuple(mission_phases),
             save_plot=True,
             output_filename="atlas_aviary_mission_profile.png",
             show_plot=True,
