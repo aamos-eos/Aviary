@@ -6,13 +6,13 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import NearestNDInterpolator, griddata
 
 from aviary.utils.dvlabel import DVLabel
-from aviary.utils.math.add_subtract_comp import AddSubtractComp
-from aviary.utils.math.multiply_divide_comp import ElementMultiplyDivideComp
+from aviary.utils.math_components.add_subtract_comp import AddSubtractComp
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
 from aviary.utils.matrix_vector_converter import MatrixToVectorConverter, VectorToMatrixConverter
 from aviary.utils.tiler import Tiler
 
 # Import the global data store
-from .propeller_data import PropellerData
+from aviary.models.engines.propulsion.prop.propeller_data import PropellerData
 
 from aviary.utils.smooth_minmax import SmoothMaxComp, SmoothMinComp
 
@@ -147,8 +147,8 @@ class EmpiricalPropellerMM(om.Group):
     def _load_data(cls):
         if cls._data_loaded:
             return
-        PropellerData.load_data(prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_6blade_13ft.xlsx', sheet_name='data')
-        PropellerData.load_rpm_schedule(prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_6blade_13ft.xlsx', sheet_name='RPM_schedule')
+        PropellerData.load_data(prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_6blade_13ft.xlsx', sheet_name='data')
+        PropellerData.load_rpm_schedule(prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_6blade_13ft.xlsx', sheet_name='RPM_schedule')
         
         cls._data_loaded = True
     
@@ -156,7 +156,7 @@ class EmpiricalPropellerMM(om.Group):
     def _load_config_data(cls):
         if cls._config_data_loaded:
             return
-        PropellerData.load_config_data(prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_6blade_13ft.xlsx', sheet_name='INFO')
+        PropellerData.load_config_data(prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_6blade_13ft.xlsx', sheet_name='INFO')
         cls._KwmdDrag = PropellerData._KwmdDrag
         cls._f_slipstream = PropellerData._slipstream_data
         cls._config_data_loaded = True
@@ -636,7 +636,7 @@ def test_interpolation_accuracy():
     
     # Ensure data is loaded
     PropellerData.load_data(
-        prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_6blade_13ft.xlsx', 
+        prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_6blade_13ft.xlsx', 
         sheet_name='data'
     )
     

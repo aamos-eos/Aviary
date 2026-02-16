@@ -4,10 +4,10 @@ import jax.numpy as jnp
 import openmdao.jax as omj
 import numpy as np
 import matplotlib.pyplot as plt
-from .import_sorted_turbo_data import SortedTurboData
+from aviary.models.engines.propulsion.turbine.import_sorted_turbo_data import SortedTurboData
 
-from aviary.utils.math.multiply_divide_comp import ElementMultiplyDivideComp
-from aviary.utils.math.integrals import Integrator
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
+from aviary.utils.math_components.integrals import Integrator
 from aviary.utils.matrix_vector_converter import MatrixToVectorConverter, VectorToMatrixConverter
 from aviary.utils.tiler import Tiler
 from aviary.utils.smooth_minmax import SmoothMaxComp, SmoothMinComp
@@ -207,7 +207,7 @@ class TurboMission(om.Group):
     def _load_data(cls, turb_type='PT6'):
         if cls._data_loaded and cls._turb_type == turb_type:
             return
-        SortedTurboData.load_data(csv_filename=f'models/atlas/atlas/propulsion/empirical_data/sorted_turbo_dataset_{turb_type}.csv')
+        SortedTurboData.load_data(csv_filename=f'aviary/models/engines/propulsion/empirical_data/sorted_turbo_dataset_{turb_type}.csv')
         cls._data_loaded = True
         cls._turb_type = turb_type
 
@@ -582,7 +582,7 @@ def _get_turbo_interpolation_results(plot_error=False, turb_type='PT6'):
     Returns: interpolated_values_ff, actual_values_ff, relative_errors_ff, interpolated_values_power, actual_values_power, relative_errors_power
     """
     # Get the data
-    SortedTurboData.load_data(csv_filename=f'models/atlas/atlas/propulsion/empirical_data/sorted_turbo_dataset_{turb_type}.csv')
+    SortedTurboData.load_data(csv_filename=f'aviary/models/engines/propulsion/empirical_data/sorted_turbo_dataset_{turb_type}.csv')
     
     # Use a subset of data points to avoid overfitting test
     # Use every 10th point to create test data that's different from training

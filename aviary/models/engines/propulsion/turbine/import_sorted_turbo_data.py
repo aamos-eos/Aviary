@@ -286,7 +286,7 @@ def print_matrix_info(data_dict):
 
 # Example usage
 if __name__ == "__main__":
-    csv_filename = 'models/atlas/atlas/propulsion/empirical_data/sorted_turbo_dataset.csv'
+    csv_filename = 'aviary/models/engines/propulsion/empirical_data/sorted_turbo_dataset.csv'
     
     print("Loading sorted turbo data from CSV...")
     data_dict = import_sorted_turbo_data(csv_filename)

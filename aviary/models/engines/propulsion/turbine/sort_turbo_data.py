@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from .turbo_data import TurboData
+from aviary.models.engines.propulsion.turbine.turbo_data import TurboData
 
 def sort_turbo_dataset(data, input_cols, output_cols):
     """
@@ -140,7 +140,7 @@ def create_dataframe_from_turbo_data():
 # Main execution
 if __name__ == "__main__":
     # Load PT6 base data (used for both PT6 and ACCE)
-    turbo_filename = 'models/atlas/atlas/propulsion/empirical_data/PT6E-67XP-4_EngData.xlsx'
+    turbo_filename = 'aviary/models/engines/propulsion/empirical_data/PT6E-67XP-4_EngData.xlsx'
     sheet_name = 'CRZ'
 
     print("Loading PT6 base turbo data...")
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     visualize_turbo_data(data, sorted_data, input_columns, output_columns)
 
     # Save PT6 dataset
-    pt6_csv = 'models/atlas/atlas/propulsion/empirical_data/sorted_turbo_dataset_PT6.csv'
+    pt6_csv = 'aviary/models/engines/propulsion/empirical_data/sorted_turbo_dataset_PT6.csv'
     sorted_data.to_csv(pt6_csv, index=False)
     print(f"\nPT6 dataset saved to '{pt6_csv}'")
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     acce_data = sorted_data.copy()
     acce_data['power_kW'] = acce_data['power_kW'] * 1.1
     acce_data['JetThrust_N'] = acce_data['JetThrust_N'] * 1.1
-    acce_csv = 'models/atlas/atlas/propulsion/empirical_data/sorted_turbo_dataset_ACCE.csv'
+    acce_csv = 'aviary/models/engines/propulsion/empirical_data/sorted_turbo_dataset_ACCE.csv'
     acce_data.to_csv(acce_csv, index=False)
     print(f"ACCE dataset saved to '{acce_csv}' (+10% power, +10% jet thrust, fuel flow unchanged)")
     

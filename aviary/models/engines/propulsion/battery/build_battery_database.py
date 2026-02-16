@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 
 # Import the existing battery data
-from .battery_data import BatteryData
+from aviary.models.engines.propulsion.battery.battery_data import BatteryData
 
 class BatterySolver:
     """
@@ -566,7 +566,7 @@ def build_database(save_database=True, plot_database=True, battery_datasheet_nam
     """Main function to build the battery database."""
     
     # Battery data file path
-    battery_original_filename = 'models/atlas/atlas/propulsion/empirical_data/' + battery_datasheet_name 
+    battery_original_filename = 'aviary/models/engines/propulsion/empirical_data/' + battery_datasheet_name 
     bat_filename = battery_original_filename + '.xlsx'
     cell_sheetname = 'BOL_cell_fct_CRate'
     config_sheetname = 'battery_config'
@@ -674,7 +674,7 @@ def _get_battery_solver():
     Helper function to create and return a BatterySolver instance.
     Returns: solver instance
     """
-    battery_original_filename = 'models/atlas/atlas/propulsion/empirical_data/inHouse_battery_1motorConfig_208s27p_4grp_to_each_nacelle'
+    battery_original_filename = 'aviary/models/engines/propulsion/empirical_data/inHouse_battery_1motorConfig_208s27p_4grp_to_each_nacelle'
     bat_filename = battery_original_filename + '.xlsx'
     cell_sheetname = 'BOL_cell_fct_CRate'
     config_sheetname = 'battery_config'

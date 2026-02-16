@@ -9,14 +9,14 @@ import numpy as np
 import cProfile
 import matplotlib.pyplot as plt
 import json
-from aviary.utils.math.multiply_divide_comp import ElementMultiplyDivideComp
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
 from aviary.utils.matrix_vector_converter import MatrixToVectorConverter, VectorToMatrixConverter
 import time
 
 # Import the global data store
-from .h3x_motor_data_web import MotorDataEffMap # Torque to efficiency lookup table
-from .h3x_motor_data_web import MotorDataPowerVoltCurve # Power to voltage lookup table
-from .h3x_motor_data_rfi import MotorDataPowerEffCurve # Power to efficiency lookup table
+from aviary.models.engines.propulsion.motor.h3x_motor_data_web import MotorDataEffMap # Torque to efficiency lookup table
+from aviary.models.engines.propulsion.motor.h3x_motor_data_web import MotorDataPowerVoltCurve # Power to voltage lookup table
+from aviary.models.engines.propulsion.motor.h3x_motor_data_rfi import MotorDataPowerEffCurve # Power to efficiency lookup table
 
 
 
@@ -33,9 +33,9 @@ def _get_motor_interpolation_results(plot_error=False):
     Returns: efficiency_results, voltage_power_results, power_efficiency_results
     """
     # Load the actual data for comparison
-    MotorDataEffMap.load_data(motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM_2300_eff.xlsx')
-    MotorDataPowerVoltCurve.load_data(motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM_2300_volts.xlsx')
-    MotorDataPowerEffCurve.load_data(motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM-XXXX_1MW.xlsx')
+    MotorDataEffMap.load_data(motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM_2300_eff.xlsx')
+    MotorDataPowerVoltCurve.load_data(motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM_2300_volts.xlsx')
+    MotorDataPowerEffCurve.load_data(motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM-XXXX_1MW.xlsx')
     
     # Test 1: Torque/RPM to Efficiency Interpolation using EmpiricalMotor
     n_test_points = min(20, len(MotorDataEffMap.rpm_data))
@@ -598,8 +598,8 @@ class EmpiricalMotor(om.Group):
         
         #print("loading motor data")
         # Load motor data
-        MotorDataEffMap.load_data(motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM_2300_eff.xlsx')
-        MotorDataPowerEffCurve.load_data(motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM-XXXX_1MW.xlsx')
+        MotorDataEffMap.load_data(motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM_2300_eff.xlsx')
+        MotorDataPowerEffCurve.load_data(motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM-XXXX_1MW.xlsx')
 
         cls._rpm_tq_eff_rpm = MotorDataEffMap.rpm_data
         cls._rpm_tq_eff_torque = MotorDataEffMap.torque_data
@@ -806,7 +806,7 @@ def test_motor_components():
     # Build NearestNDInterpolator directly for comparison (like run_prop_model)
     if test_interp:
         # Load data for nearest neighbor interpolation
-        MotorDataPowerEffCurve.load_data(motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM-XXXX_1MW.xlsx')
+        MotorDataPowerEffCurve.load_data(motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM-XXXX_1MW.xlsx')
         
         # Build nearest neighbor interpolator as a simple function
         voltage_power_eff_interpolator_nearest = NearestNDInterpolator(

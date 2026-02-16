@@ -9,7 +9,7 @@ class MotorDataEffMap:
 
     
     @classmethod
-    def load_data(cls, motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM_2300_eff.xlsx'):
+    def load_data(cls, motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM_2300_eff.xlsx'):
         """Load data once and store it in the class variables"""
         if cls.rpm_data is None:  # Only load if not already loaded
             # Read the Excel file (assumes headers are in the first row)
@@ -37,7 +37,7 @@ class MotorDataEffMap:
             
     
     @classmethod
-    def get_data(cls, motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM_2300_eff.xlsx'):
+    def get_data(cls, motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM_2300_eff.xlsx'):
         """Ensure data is loaded and return all data as a tuple"""
         if cls.rpm_data is None:
             cls.load_data(motor_filename)
@@ -51,7 +51,7 @@ class MotorDataPowerVoltCurve:
     rpm_data = None
     
     @classmethod
-    def load_data(cls, motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM_2300_volts.xlsx'):
+    def load_data(cls, motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM_2300_volts.xlsx'):
         """Load data once and store it in the class variables"""
         if cls.voltage_data is None:  # Only load if not already loaded
             # Read the Excel file (assumes headers are in the first row)
@@ -78,7 +78,7 @@ class MotorDataPowerVoltCurve:
             #print(f"Number of singular (duplicate input) points: {dupe_input_mask.sum()}")
                 
     @classmethod
-    def get_data(cls, motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM_2300_volts.xlsx'):
+    def get_data(cls, motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM_2300_volts.xlsx'):
         """Ensure data is loaded and return all data as a tuple"""
         if cls.voltage_data is None:
             cls.load_data(motor_filename)

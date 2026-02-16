@@ -20,9 +20,9 @@ import os
 from openmdao.api import IndepVarComp
 from aviary.utils.tiler import Tiler
 from aviary.utils.matrix_vector_converter import VectorToMatrixConverter, MatrixToVectorConverter
-from ..systems.parallel_hybrid import SumAlongAxis
-from .q400_ptrain_data import Q400PtrainData
-from ..systems.parallel_hybrid import DetermineNominalThrottle, ApplyThrustShare
+from aviary.models.engines.propulsion.systems.parallel_hybrid import SumAlongAxis
+from aviary.models.engines.propulsion.q400.q400_ptrain_data import Q400PtrainData
+from aviary.models.engines.propulsion.systems.parallel_hybrid import DetermineNominalThrottle, ApplyThrustShare
 from aviary.utils.dvlabel import DVLabel
 
 class Q400Ptrain(om.Group):

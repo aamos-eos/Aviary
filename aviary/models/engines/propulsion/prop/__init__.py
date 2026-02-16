@@ -1,3 +1,3 @@
-from .propeller_empirical_mm import EmpiricalPropellerCoeffMM
-from .propeller_data import PropellerData
-from .propeller_empirical_mtip_mm import EmpiricalPropellerCoeffMMMtip
+from aviary.models.engines.propulsion.prop.propeller_empirical_mm import EmpiricalPropellerCoeffMM
+from aviary.models.engines.propulsion.prop.propeller_data import PropellerData
+from aviary.models.engines.propulsion.prop.propeller_empirical_mtip_mm import EmpiricalPropellerCoeffMMMtip

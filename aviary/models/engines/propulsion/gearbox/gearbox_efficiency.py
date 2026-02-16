@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import openmdao.jax as omj
 # Import the global data store
-from .gearbox_data import GearboxData
+from aviary.models.engines.propulsion.gearbox.gearbox_data import GearboxData
 from aviary.utils.matrix_vector_converter import MatrixToVectorConverter, VectorToMatrixConverter
 from aviary.utils.smooth_minmax import SmoothMaxComp, SmoothMinComp
 
@@ -132,7 +132,7 @@ class GearboxEfficiencyGroup(om.Group):
     def _load_data(cls):
         if cls._data_loaded:
             return
-        GearboxData.load_data(gearbox_filename='models/atlas/atlas/propulsion/empirical_data/gearbox.xlsx', sheet_name='data')
+        GearboxData.load_data(gearbox_filename='aviary/models/engines/propulsion/empirical_data/gearbox.xlsx', sheet_name='data')
         cls._data_loaded = True
     
     def setup(self):
@@ -195,7 +195,7 @@ def create_gearbox_efficiency_test():
     Create a test using the same throttle values from experimental data.
     """
     # Load experimental data to get the throttle values
-    GearboxData.load_data(gearbox_filename='models/atlas/atlas/propulsion/empirical_data/gearbox.xlsx', sheet_name='data')
+    GearboxData.load_data(gearbox_filename='aviary/models/engines/propulsion/empirical_data/gearbox.xlsx', sheet_name='data')
     exp_throttle = GearboxData.throttle_data
     exp_efficiency = GearboxData.efficiency_data
     

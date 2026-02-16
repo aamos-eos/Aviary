@@ -2,19 +2,18 @@
 #from aviary.models.engines.propulsion import  PowerSplitNacelle
 from aviary.utils.dvlabel import DVLabel
 import jax
-from ..prop import EmpiricalPropellerCoeffMM, EmpiricalPropellerCoeffMMMtip
-from ..turbine.turbo_empirical_mm_structured import TurboMission
-from ..nacelle_splitter import PowerSplitNacelle
-from ..battery.battery_data import BatteryData
-from ..motor import RubberMotor
-from ..motor import EmpiricalMotor
-from ..gearbox.gearbox_efficiency import GearboxEfficiencyGroup
+from aviary.models.engines.propulsion.prop import EmpiricalPropellerCoeffMMMtip
+from aviary.models.engines.propulsion.turbine.turbo_empirical_mm_structured import TurboMission
+from aviary.models.engines.propulsion.nacelle_splitter import PowerSplitNacelle
+from aviary.models.engines.propulsion.battery.battery_data import BatteryData
+from aviary.models.engines.propulsion.motor import RubberMotor
+from aviary.models.engines.propulsion.motor import EmpiricalMotor
+from aviary.models.engines.propulsion.gearbox.gearbox_efficiency import GearboxEfficiencyGroup
 from openmdao.api import Group, IndepVarComp
 from aviary.utils.sum_axis import SumAlongAxis
 import numpy as np
 import openmdao.api as om
 import matplotlib.pyplot as plt
-import jax.numpy as jnp
 
 class GearboxComponent(om.ExplicitComponent):
     """
@@ -1293,7 +1292,7 @@ def test_parallel_hybrid_electric_propulsion_system(plot_results=False):
     #ivc.add_output('nacelles|rated_power_gt', val=872.0 , units='kW')
     #ivc.add_output('nacelles|rated_power_em', val=2300.0 , units='kW')
     # Battery Inputs
-    bat_data = BatteryData.get_data(bat_filename='models/atlas/atlas/propulsion/empirical_data/MolicelP70Xplus_module210s8p_BOL_4grp1s14p_independent.xlsx', 
+    bat_data = BatteryData.get_data(bat_filename='aviary/models/engines/propulsion/empirical_data/MolicelP70Xplus_module210s8p_BOL_4grp1s14p_independent.xlsx', 
                                     cell_sheetname='BOL_cell_fct_CRate', 
                                     config_sheetname='battery_config')
     #ivc.add_output('ac|propulsion|battery|n_str', 4, desc='number of battery strings')

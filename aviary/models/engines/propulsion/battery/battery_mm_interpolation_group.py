@@ -28,7 +28,7 @@ class BatteryMMInterpolationGroup(om.Group):
             
         # Load the clean battery database
         try:
-            df = pd.read_csv('models/atlas/atlas/propulsion/empirical_data/' + battery_datasheet_name + '_battery_power_database_full.csv')
+            df = pd.read_csv('aviary/models/engines/propulsion/empirical_data/' + battery_datasheet_name + '_battery_power_database_full.csv')
             #print(f"Loaded battery database with {len(df)} points")
         except FileNotFoundError:   
             raise FileNotFoundError("' + battery_datasheet_name + '_battery_power_database_full.csv' not found. Please run build_battery_database.py to create the database.")
@@ -157,7 +157,7 @@ def _get_battery_interpolation_results(plot_error=False, battery_datasheet_name=
     ivc = om.IndepVarComp()
     
     # Load actual data points from the database for testing
-    df = pd.read_csv('models/atlas/atlas/propulsion/empirical_data/' + battery_datasheet_name + '_battery_power_database_full.csv')
+    df = pd.read_csv('aviary/models/engines/propulsion/empirical_data/' + battery_datasheet_name + '_battery_power_database_full.csv')
     
     # Set up random number generator and pick random test points
     np.random.seed(42)  # For reproducible results
@@ -357,7 +357,7 @@ def test_battery_interpolation(battery_datasheet_name='MolicelP70Xplus_module210
     ivc = om.IndepVarComp()
     
     # Load actual data points from the database for testing
-    df = pd.read_csv('models/atlas/atlas/propulsion/empirical_data/' + battery_datasheet_name + '_battery_power_database_full.csv')
+    df = pd.read_csv('aviary/models/engines/propulsion/empirical_data/' + battery_datasheet_name + '_battery_power_database_full.csv')
     
     # Set up random number generator and pick random test points
     np.random.seed(42)  # For reproducible results
@@ -529,7 +529,7 @@ def create_3d_battery_visualization(battery_datasheet_name='MolicelP70Xplus_modu
     
     # Load actual data points from the database for comparison
     try:
-        df = pd.read_csv('models/atlas/atlas/propulsion/empirical_data/' + battery_datasheet_name + '_battery_power_database_full.csv')
+        df = pd.read_csv('aviary/models/engines/propulsion/empirical_data/' + battery_datasheet_name + '_battery_power_database_full.csv')
         print(f"Loaded {len(df)} actual data points from database")
     except FileNotFoundError:
         print("Warning: Could not load database file. Only showing interpolation surface.")

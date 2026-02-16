@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 from scipy.integrate import cumulative_simpson, cumulative_trapezoid
 from aviary.utils.extract_last import ExtractLast
 from aviary.utils.smooth_minmax import SmoothMaxComp, SmoothMinComp
-from .cross_feed_logic import DemandFeed
+from aviary.models.engines.propulsion.battery.cross_feed_logic import DemandFeed
 
 import openmdao.api as om
-from aviary.utils.math.integrals import Integrator
-from .battery_mm_interpolation_group import BatteryMMInterpolationGroup
+from aviary.utils.math_components.integrals import Integrator
+from aviary.models.engines.propulsion.battery.battery_mm_interpolation_group import BatteryMMInterpolationGroup
 from aviary.utils.matrix_vector_converter import MatrixToVectorConverter, VectorToMatrixConverter
-from .battery_data import BatteryData
+from aviary.models.engines.propulsion.battery.battery_data import BatteryData
 
 
 import openmdao.api as om
@@ -981,7 +981,7 @@ class EmpiricalBatteryPower(om.Group):
         # Check if we already have this datasheet loaded
         if cls._ocv_data_loaded and cls._loaded_datasheet_name == battery_datasheet_name:
             return
-        BatteryData.load_data(bat_filename='models/atlas/atlas/propulsion/empirical_data/' + battery_datasheet_name + '.xlsx', 
+        BatteryData.load_data(bat_filename='aviary/models/engines/propulsion/empirical_data/' + battery_datasheet_name + '.xlsx', 
                             cell_sheetname='BOL_cell_fct_CRate', config_sheetname='battery_config')
 
         cls._ocv_data_incr = BatteryData.ocv_data_incr
@@ -1259,7 +1259,7 @@ def test_battery_component(battery_datasheet_name='MolicelP70Xplus_module210s8p_
     start_time = time.time()
     
     # Get the data for any other calculations you need
-    bat_data = BatteryData.get_data(bat_filename='models/atlas/atlas/propulsion/empirical_data/' + battery_datasheet_name + '.xlsx', 
+    bat_data = BatteryData.get_data(bat_filename='aviary/models/engines/propulsion/empirical_data/' + battery_datasheet_name + '.xlsx', 
                                     cell_sheetname='BOL_cell_fct_CRate', 
                                     config_sheetname='battery_config')
     

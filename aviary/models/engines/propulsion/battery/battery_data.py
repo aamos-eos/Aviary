@@ -126,7 +126,7 @@ class BatteryData:
 
     
 if __name__ == '__main__':
-    BatteryData.load_data(bat_filename='models/atlas/atlas/propulsion/empirical_data/inHouse_battery_1motorConfig_208s27p_4grp_to_each_nacelle.xlsx', 
+    BatteryData.load_data(bat_filename='aviary/models/engines/propulsion/empirical_data/inHouse_battery_1motorConfig_208s27p_4grp_to_each_nacelle.xlsx', 
                             cell_sheetname='BOL_cell_fct_CRate', 
                             config_sheetname='battery_config')
 

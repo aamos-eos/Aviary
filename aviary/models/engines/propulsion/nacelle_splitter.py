@@ -1,15 +1,12 @@
 import numpy as np
 import openmdao.api as om
-from aviary.utils.dvlabel import DVLabel
-from aviary.utils.math.add_subtract_comp import AddSubtractComp
-from aviary.utils.math.multiply_divide_comp import ElementMultiplyDivideComp
+
 from aviary.utils.matrix_vector_converter import MatrixToVectorConverter, VectorToMatrixConverter
-from .turbine.turbo_empirical_mm_structured import ComputeMaxPower
-from .turbine.import_sorted_turbo_data import SortedTurboData
-from aviary.utils.smooth_minmax import SmoothMaxComp, SmoothMinComp
-from aviary.utils.tiler import Tiler
+from aviary.models.engines.propulsion.turbine.turbo_empirical_mm_structured import ComputeMaxPower
+from aviary.models.engines.propulsion.turbine.import_sorted_turbo_data import SortedTurboData
+from aviary.utils.smooth_minmax import SmoothMaxComp
 from aviary.utils.broadcast_scalars import ScalarToMatrixBroadcast
-from .motor.h3x_motor_data_web import MotorDataPowerVoltCurve # Power to voltage lookup table
+from aviary.models.engines.propulsion.motor.h3x_motor_data_web import MotorDataPowerVoltCurve # Power to voltage lookup table
 from scipy.interpolate import griddata
 
 
@@ -190,7 +187,7 @@ class PowerSplitNacelle(om.Group):
             return
         
 
-        MotorDataPowerVoltCurve.load_data(motor_filename='models/atlas/atlas/propulsion/empirical_data/H3X_HPDM_2300_volts.xlsx')
+        MotorDataPowerVoltCurve.load_data(motor_filename='aviary/models/engines/propulsion/empirical_data/H3X_HPDM_2300_volts.xlsx')
 
         rpm_data = MotorDataPowerVoltCurve.rpm_data
         voltage_data = MotorDataPowerVoltCurve.voltage_data
@@ -237,7 +234,7 @@ class PowerSplitNacelle(om.Group):
         turb_type = self.options["turb_type"]
 
         # Load turbo data based on turb_type (motor data already loaded in initialize)
-        SortedTurboData.load_data(csv_filename=f'models/atlas/atlas/propulsion/empirical_data/sorted_turbo_dataset_{turb_type}.csv')
+        SortedTurboData.load_data(csv_filename=f'aviary/models/engines/propulsion/empirical_data/sorted_turbo_dataset_{turb_type}.csv')
 
         #self.connect('altitude', 'lim_min_altitude.input_array')
         self.add_subsystem('lim_min_alt', SmoothMaxComp(num_nodes=nn, mode='limit', units='m', limit_val=1e-6, n_comps=1), promotes_inputs=[('input_array', 'altitude')], promotes_outputs=[])

@@ -5,13 +5,13 @@ from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
 import matplotlib.pyplot as plt
 from scipy.interpolate import NearestNDInterpolator, griddata
 from aviary.utils.dvlabel import DVLabel
-from aviary.utils.math.add_subtract_comp import AddSubtractComp
-from aviary.utils.math.multiply_divide_comp import ElementMultiplyDivideComp
+from aviary.utils.math_components.add_subtract_comp import AddSubtractComp
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
 from aviary.utils.matrix_vector_converter import MatrixToVectorConverter, VectorToMatrixConverter
 import time
 
 # Import the global data store
-from .propeller_data import PropellerData
+from aviary.models.engines.propulsion.prop.propeller_data import PropellerData
 
 from aviary.utils.smooth_minmax import SmoothMaxComp, SmoothMinComp
 
@@ -474,7 +474,7 @@ class EmpiricalPropellerCoeffMMMtip(om.Group):
     _data_loaded = False
     
     # Cache file path for pre-computed grid data
-    _cache_file = 'models/atlas/atlas/propulsion/empirical_data/propeller_grid_cache.npz'
+    _cache_file = 'aviary/models/engines/propulsion/empirical_data/propeller_grid_cache.npz'
 
     def initialize(self):
         self.options.declare('num_nodes', default=1, desc='number of nodes to evaluate')
@@ -499,8 +499,8 @@ class EmpiricalPropellerCoeffMMMtip(om.Group):
         start_load_data = time.time()
         if cls._data_loaded:
             return
-        PropellerData.load_data(prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='data')
-        PropellerData.load_rpm_schedule(prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='RPM_schedule')
+        PropellerData.load_data(prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='data')
+        PropellerData.load_rpm_schedule(prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='RPM_schedule')
         elapsed = time.time() - start_load_data
         print(f"  -> Data loaded in {elapsed:.1f} seconds")
         cls._data_loaded = True
@@ -510,7 +510,7 @@ class EmpiricalPropellerCoeffMMMtip(om.Group):
         start_load_config_data = time.time()
         if cls._config_data_loaded:
             return
-        PropellerData.load_config_data(prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='INFO')
+        PropellerData.load_config_data(prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='INFO')
         cls._KwmdDrag = PropellerData._KwmdDrag
         cls._f_slipstream = PropellerData._slipstream_data
         cls._config_data_loaded = True
@@ -1166,7 +1166,7 @@ def _get_propeller_interpolation_results():
     Returns: interpolated_values_Cp, interpolated_values_Ct, actual_values, relative_errors_Cp, relative_errors_Ct
     """
     # Get the data
-    prop_data = PropellerData.get_data(prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='data')
+    prop_data = PropellerData.get_data(prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='data')
     
     # Test with a subset of data points to avoid overfitting test
     # Use every 10th point to create test data that's different from training
@@ -1182,7 +1182,7 @@ def _get_propeller_interpolation_results():
     eta_test = prop_data.dyn_eta_data[test_indices] / 100
     
     # Get propeller diameter from config
-    PropellerData.load_config_data(prop_filename='models/atlas/atlas/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='INFO')
+    PropellerData.load_config_data(prop_filename='aviary/models/engines/propulsion/empirical_data/DOWTY_prop_CCA8_6blade_13ft_cleaned.xlsx', sheet_name='INFO')
 
     
     # ===== Test 1: power_set=True (Cp-based interpolation) =====

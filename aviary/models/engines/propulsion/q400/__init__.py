@@ -1,1 +1,1 @@
-from .q400_ptrain_mm import Q400Ptrain
+from aviary.models.engines.propulsion.q400.q400_ptrain_mm import Q400Ptrain

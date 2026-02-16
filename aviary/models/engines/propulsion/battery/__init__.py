@@ -1,1 +1,1 @@
-from .battery_empirical_power import EmpiricalBatteryPower
+from aviary.models.engines.propulsion.battery.battery_empirical_power import EmpiricalBatteryPower
