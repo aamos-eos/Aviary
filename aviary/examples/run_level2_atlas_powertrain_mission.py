@@ -9,6 +9,7 @@ This script replaces the core propulsion mission builder with a custom builder t
 """
 
 import copy
+import time
 
 import numpy as np
 import openmdao.api as om
@@ -19,10 +20,112 @@ from aviary.models.engines.propulsion.systems.parallel_hybrid import (
 )
 from aviary.models.missions.height_energy_default import phase_info as default_phase_info
 from aviary.subsystems.propulsion.propulsion_builder import PropulsionBuilder
+from aviary.utils.aviary_values import AviaryValues
 from aviary.utils.matrix_vector_converter import VectorToMatrixConverter
 from aviary.utils.sum_axis import SumAlongAxis
 from aviary.visualization.plot_funcs import plot_atlas_aviary_mission
 from aviary.variable_info.variables import Aircraft, Dynamic
+
+
+class AtlasPreMissionPropulsionGroup(om.Group):
+    """Atlas-backed pre-mission propulsion sizing surrogate for Aviary pre-mission flow."""
+
+    def initialize(self):
+        self.options.declare("aviary_inputs", types=AviaryValues)
+        self.options.declare("num_props", types=int, default=4)
+        self.options.declare("num_batt_strings", default=4, types=int)
+
+    def setup(self):
+        aviary_inputs = self.options["aviary_inputs"]
+        npp = self.options["num_props"]
+        n_str = self.options["num_batt_strings"]
+        nn = 1
+
+        ivc = om.IndepVarComp()
+        ivc.add_output("fltcond|M", val=np.array([0.0]), units="unitless")
+        ivc.add_output("fltcond|h", val=np.array([0.0]), units="ft")
+        ivc.add_output("fltcond|rho", val=np.array([1.225]), units="kg/m**3")
+        ivc.add_output("fltcond|a", val=np.array([340.0]), units="m/s")
+        ivc.add_output("fltcond|Utrue", val=np.array([75.0]), units="m/s")
+        ivc.add_output("fltcond|T", val=np.array([15.0]), units="degC")
+        ivc.add_output("fltcond|disa", val=np.array([0.0]), units="degC")
+        ivc.add_output("nacelle_max_rated_power", val=np.array([2.0e4]), units="kW")
+        ivc.add_output("nacelle_throttle", val=np.ones((npp, nn)))
+        ivc.add_output("motor_rpm_cmd", val=1750.0 * np.ones((npp, nn)), units="rpm")
+        ivc.add_output("power_split_fraction_em", val=0.5 * np.ones((npp, nn)))
+        ivc.add_output("battery_q_cool", val=25.0 * np.ones((n_str, nn)), units="kW")
+        ivc.add_output("prop_diameter", val=4.2 * np.ones((npp, nn)), units="m")
+        ivc.add_output("motor_rating", val=4.0e3, units="kW")
+        self.add_subsystem("ivc", ivc, promotes_outputs=["*"])
+
+        self.add_subsystem(
+            "atlas_ptrain_premission",
+            ParallelHybridElectricPropulsionSystem(
+                num_nodes=nn,
+                num_props=npp,
+                num_em_per_nac=1,
+                num_turb_per_nac=1,
+                n_str=n_str,
+                rule="fraction",
+                bias="em",
+                nacelle_power_set=True,
+                prop_rpm_set=False,
+                prop_thrust_set=False,
+                cnvg_throttle=False,
+                gt_command="power",
+                motor_command="power",
+                nacelle_command="throttle",
+                power_spec="relative",
+                gt_idle_allowed=True,
+                size_motor=False,
+                turb_type="PT6",
+            ),
+            promotes_outputs=[],
+        )
+
+        self.connect("fltcond|M", "atlas_ptrain_premission.fltcond|M")
+        self.connect("fltcond|h", "atlas_ptrain_premission.fltcond|h")
+        self.connect("fltcond|rho", "atlas_ptrain_premission.fltcond|rho")
+        self.connect("fltcond|a", "atlas_ptrain_premission.fltcond|a")
+        self.connect("fltcond|Utrue", "atlas_ptrain_premission.fltcond|Utrue")
+        self.connect("fltcond|T", "atlas_ptrain_premission.fltcond|T")
+        self.connect("fltcond|disa", "atlas_ptrain_premission.fltcond|disa")
+        self.connect("nacelle_max_rated_power", "atlas_ptrain_premission.nacelle_max_rated_power")
+        self.connect("nacelle_throttle", "atlas_ptrain_premission.nacelles.throttle_nac")
+        self.connect("motor_rpm_cmd", "atlas_ptrain_premission.nacelles.rpm")
+        self.connect(
+            "power_split_fraction_em", "atlas_ptrain_premission.nacelles.power_split_fraction_em"
+        )
+        self.connect("battery_q_cool", "atlas_ptrain_premission.ac|propulsion|battery|q_cool_bat")
+        self.connect("prop_diameter", "atlas_ptrain_premission.ac|propulsion|propeller|diameter")
+        self.connect("motor_rating", "atlas_ptrain_premission.ac|propulsion|motor|rating")
+
+        self.add_subsystem(
+            "sls_thrust_convert",
+            om.ExecComp(
+                "total_scaled_sls_thrust = total_thrust_N * 0.22480894387096263",
+                total_thrust_N={"val": np.ones(nn), "units": "N"},
+                total_scaled_sls_thrust={"val": np.ones(nn), "units": "lbf"},
+                has_diag_partials=True,
+            ),
+            promotes_outputs=[("total_scaled_sls_thrust", Aircraft.Propulsion.TOTAL_SCALED_SLS_THRUST)],
+        )
+        self.connect("atlas_ptrain_premission.total_thrust", "sls_thrust_convert.total_thrust_N")
+
+        # Provide per-engine scaled SLS thrust for components expecting this pre-mission vector.
+        num_engine_types = len(np.atleast_1d(aviary_inputs.get_val(Aircraft.Engine.NUM_ENGINES)))
+        try:
+            per_engine_sls = np.atleast_1d(
+                aviary_inputs.get_val(Aircraft.Engine.SCALED_SLS_THRUST, units="lbf")
+            )
+        except Exception:
+            per_engine_sls = np.ones(num_engine_types) * 20000.0
+        if per_engine_sls.size != num_engine_types:
+            per_engine_sls = np.ones(num_engine_types) * float(per_engine_sls.ravel()[0])
+
+        engine_sls_ivc = om.IndepVarComp()
+        engine_sls_ivc.add_output(Aircraft.Engine.SCALED_SLS_THRUST, val=per_engine_sls, units="lbf")
+        self.add_subsystem("engine_sls_ivc", engine_sls_ivc, promotes_outputs=[Aircraft.Engine.SCALED_SLS_THRUST])
 
 
 class AtlasMissionPropulsionGroup(om.Group):
@@ -259,13 +362,21 @@ class AtlasMissionPropulsionGroup(om.Group):
 class AtlasMissionPropulsionBuilder(PropulsionBuilder):
     """PropulsionBuilder that uses stock pre-mission and Atlas mission propulsion."""
 
-    def __init__(self, core_propulsion_builder, num_props):
+    def __init__(self, core_propulsion_builder, num_props, use_core_premission=True):
         super().__init__(name="propulsion", meta_data=core_propulsion_builder.meta_data)
         self._core_propulsion_builder = core_propulsion_builder
         self._num_props = num_props
+        self._use_core_premission = use_core_premission
 
     def build_pre_mission(self, aviary_inputs, **kwargs):
-        return self._core_propulsion_builder.build_pre_mission(aviary_inputs, **kwargs)
+        # Keeping core pre-mission propulsion preserves stock sizing/weight plumbing.
+        # Set use_core_premission=False to skip building the default turbofan pre-mission model.
+        if self._use_core_premission:
+            return self._core_propulsion_builder.build_pre_mission(aviary_inputs, **kwargs)
+        return AtlasPreMissionPropulsionGroup(
+            aviary_inputs=aviary_inputs,
+            num_props=self._num_props,
+        )
 
     def build_mission(self, num_nodes, aviary_inputs, **kwargs):
         return AtlasMissionPropulsionGroup(num_nodes=num_nodes, num_props=self._num_props)
@@ -310,7 +421,11 @@ def _build_phase_info_with_throttle_control():
     phase_info["climb"]["user_options"]["mach_bounds"] = ((0.18, 0.40), "unitless")
     phase_info["climb"]["user_options"]["altitude_final"] = (12000.0, "ft")
     phase_info["climb"]["user_options"]["altitude_bounds"] = ((0.0, 15000.0), "ft")
+    # Make climb throttle an explicit phase input (control), not optimizer-driven.
     phase_info["climb"]["user_options"]["throttle_enforcement"] = "control"
+    phase_info["climb"]["user_options"]["throttle_optimize"] = False
+    phase_info["climb"]["user_options"]["throttle_initial"] = (0.65, "unitless")
+    phase_info["climb"]["user_options"]["throttle_final"] = (0.65, "unitless")
 
     phase_info["cruise"]["user_options"]["mach_initial"] = (0.35, "unitless")
     phase_info["cruise"]["user_options"]["mach_final"] = (0.35, "unitless")
@@ -318,7 +433,8 @@ def _build_phase_info_with_throttle_control():
     phase_info["cruise"]["user_options"]["altitude_initial"] = (12000.0, "ft")
     phase_info["cruise"]["user_options"]["altitude_final"] = (12000.0, "ft")
     phase_info["cruise"]["user_options"]["altitude_bounds"] = ((9000.0, 15000.0), "ft")
-    phase_info["cruise"]["user_options"]["throttle_enforcement"] = "control"
+    # Let Aviary solve throttle in cruise/descent.
+    phase_info["cruise"]["user_options"]["throttle_enforcement"] = "path_constraint"
 
     phase_info["descent"]["user_options"]["mach_initial"] = (0.35, "unitless")
     phase_info["descent"]["user_options"]["mach_final"] = (0.20, "unitless")
@@ -326,14 +442,74 @@ def _build_phase_info_with_throttle_control():
     phase_info["descent"]["user_options"]["altitude_initial"] = (12000.0, "ft")
     phase_info["descent"]["user_options"]["altitude_final"] = (500.0, "ft")
     phase_info["descent"]["user_options"]["altitude_bounds"] = ((0.0, 15000.0), "ft")
-    phase_info["descent"]["user_options"]["throttle_enforcement"] = "control"
+    phase_info["descent"]["user_options"]["throttle_enforcement"] = "path_constraint"
 
     phase_info["post_mission"]["target_range"] = (250.0, "nmi")
 
     return phase_info
 
 
+def _set_reasonable_initial_guesses(prob):
+    """Set explicit mission guesses so run_model has non-trivial phase durations/range."""
+    climb = prob.model.traj._phases["climb"]
+    cruise = prob.model.traj._phases["cruise"]
+    descent = prob.model.traj._phases["descent"]
+
+    # Time in seconds (roughly consistent with default height-energy example scales).
+    climb.set_time_val(initial=0.0, duration=64.0 * 60.0, units="s")
+    cruise.set_time_val(initial=64.0 * 60.0, duration=70.0 * 60.0, units="s")
+    descent.set_time_val(initial=134.0 * 60.0, duration=30.0 * 60.0, units="s")
+
+    # Controls (phase endpoints).
+    climb.set_control_val("mach", vals=[0.20, 0.35], time_vals=[-1, 1], units="unitless")
+    cruise.set_control_val("mach", vals=[0.35, 0.35], time_vals=[-1, 1], units="unitless")
+    descent.set_control_val("mach", vals=[0.35, 0.20], time_vals=[-1, 1], units="unitless")
+
+    climb.set_control_val("altitude", vals=[0.0, 12000.0], time_vals=[-1, 1], units="ft")
+    cruise.set_control_val("altitude", vals=[12000.0, 12000.0], time_vals=[-1, 1], units="ft")
+    descent.set_control_val("altitude", vals=[12000.0, 500.0], time_vals=[-1, 1], units="ft")
+
+    # Climb throttle is an explicit control input for this script.
+    climb.set_control_val("throttle", vals=[0.65, 0.65], time_vals=[-1, 1], units="unitless")
+
+    # Mass state guess.
+    climb.set_state_val("mass", vals=[170000.0, 166000.0], units="lbm")
+    cruise.set_state_val("mass", vals=[166000.0, 160000.0], units="lbm")
+    descent.set_state_val("mass", vals=[160000.0, 158000.0], units="lbm")
+
+
+def _confirm_atlas_powertrain_active(prob):
+    """
+    Verify the mission ODE is using the Atlas powertrain by reading a variable that only
+    exists in the custom Atlas propulsion mission group.
+    """
+    candidate_paths = [
+        "traj.climb.rhs_all.solver_sub.propulsion.atlas_ptrain.total_thrust",
+        "traj.climb.rhs_all.propulsion.atlas_ptrain.total_thrust",
+    ]
+
+    last_exc = None
+    for path in candidate_paths:
+        try:
+            sample = prob.get_val(path)
+            print(
+                "Atlas powertrain active "
+                f"(found '{path}', sample total_thrust shape: {np.shape(sample)})"
+            )
+            return
+        except Exception as exc:  # pragma: no cover - defensive path probing
+            last_exc = exc
+
+    raise RuntimeError(
+        "Atlas powertrain does not appear to be active in mission ODE wiring."
+    ) from last_exc
+
+
 if __name__ == "__main__":
+    PLOT_MISSION = True
+    PLOT_N2 = True
+    USE_CORE_PREMISSION_PROPULSION = False
+
     phase_info = _build_phase_info_with_throttle_control()
 
     prob = av.AviaryProblem()
@@ -354,7 +530,11 @@ if __name__ == "__main__":
     # NOTE: the imported Atlas powertrain currently assumes 4 nacelle rows internally.
     # Keep this fixed at 4 to avoid shape conflicts in its current architecture.
     num_props = 4
-    atlas_prop = AtlasMissionPropulsionBuilder(core_propulsion_builder=core_prop, num_props=num_props)
+    atlas_prop = AtlasMissionPropulsionBuilder(
+        core_propulsion_builder=core_prop,
+        num_props=num_props,
+        use_core_premission=USE_CORE_PREMISSION_PROPULSION,
+    )
 
     for i, subsystem in enumerate(prob.model.subsystems):
         if subsystem.name == "propulsion":
@@ -369,16 +549,25 @@ if __name__ == "__main__":
     prob.add_design_variables()
     prob.add_objective()
     prob.setup()
+    _set_reasonable_initial_guesses(prob)
+    run_start = time.perf_counter()
     prob.run_aviary_problem(
         suppress_solver_print=True,
         run_driver=False,
         make_plots=False,
     )
+    run_elapsed = time.perf_counter() - run_start
+    print(f"Mission simulation runtime: {run_elapsed:.2f} s")
+    _confirm_atlas_powertrain_active(prob)
 
-    plot_atlas_aviary_mission(
-        prob,
-        phases=("climb", "cruise", "descent"),
-        save_plot=True,
-        output_filename="atlas_aviary_mission_profile.png",
-        show_plot=False,
-    )
+    if PLOT_MISSION:
+        plot_atlas_aviary_mission(
+            prob,
+            phases=("climb", "cruise", "descent"),
+            save_plot=True,
+            output_filename="atlas_aviary_mission_profile.png",
+            show_plot=True,
+        )
+
+    if PLOT_N2:
+        om.n2(prob, outfile="atlas_aviary_n2.html", show_browser=True)

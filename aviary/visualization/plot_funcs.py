@@ -3573,6 +3573,20 @@ def plot_atlas_aviary_mission(
         return np.concatenate(chunks)
 
     distance_nm = _concat("distance", units="NM")
+    if np.ptp(distance_nm) < 1.0e-3:
+        # In run_model-only workflows (no optimization), Dymos collocation states can
+        # remain at initial guesses. Build an estimated mission distance from V(t).
+        time_s = _concat("time", units="s")
+        velocity_mps = _concat("velocity", units="m/s")
+        dt = np.diff(time_s, prepend=time_s[0])
+        dt = np.clip(dt, 0.0, None)
+        est_distance_m = np.cumsum(velocity_mps * dt)
+        x_data = est_distance_m / 1852.0
+        x_label = "Estimated Distance (NM)"
+    else:
+        x_data = distance_nm
+        x_label = "Distance (NM)"
+
     altitude_ft = _concat("altitude", units="ft")
     throttle = _concat("throttle", units="unitless")
     thrust_lbf = _concat("thrust_net_total", units="lbf")
@@ -3582,27 +3596,27 @@ def plot_atlas_aviary_mission(
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
     fig.suptitle("Atlas Powertrain Aviary Mission")
 
-    axes[0, 0].plot(distance_nm, altitude_ft, color="tab:blue")
+    axes[0, 0].plot(x_data, altitude_ft, color="tab:blue")
     axes[0, 0].set_ylabel("Altitude (ft)")
-    axes[0, 0].set_xlabel("Distance (NM)")
+    axes[0, 0].set_xlabel(x_label)
     axes[0, 0].grid(True, alpha=0.3)
 
-    axes[0, 1].plot(distance_nm, throttle, color="tab:orange")
+    axes[0, 1].plot(x_data, throttle, color="tab:orange")
     axes[0, 1].set_ylabel("Throttle (-)")
-    axes[0, 1].set_xlabel("Distance (NM)")
+    axes[0, 1].set_xlabel(x_label)
     axes[0, 1].grid(True, alpha=0.3)
 
-    axes[1, 0].plot(distance_nm, thrust_lbf, color="tab:red")
+    axes[1, 0].plot(x_data, thrust_lbf, color="tab:red")
     axes[1, 0].set_ylabel("Total Thrust (lbf)")
-    axes[1, 0].set_xlabel("Distance (NM)")
+    axes[1, 0].set_xlabel(x_label)
     axes[1, 0].grid(True, alpha=0.3)
 
-    axes[1, 1].plot(distance_nm, -fuel_lbmph, color="tab:green", label="Fuel burn rate")
+    axes[1, 1].plot(x_data, -fuel_lbmph, color="tab:green", label="Fuel burn rate")
     ax2 = axes[1, 1].twinx()
-    ax2.plot(distance_nm, elec_kw, color="tab:purple", label="Electric power")
+    ax2.plot(x_data, elec_kw, color="tab:purple", label="Electric power")
     axes[1, 1].set_ylabel("Fuel Flow (lbm/h)")
     ax2.set_ylabel("Electric Power (kW)")
-    axes[1, 1].set_xlabel("Distance (NM)")
+    axes[1, 1].set_xlabel(x_label)
     axes[1, 1].grid(True, alpha=0.3)
 
     fig.tight_layout()
