@@ -1,7 +1,7 @@
 import unittest
 import openmdao.api as om
 from openmdao.utils.assert_utils import assert_check_partials, assert_near_equal
-from atlas.weights import BWBEmptyWeight
+from aviary.models.weights.weights_BWB import BWBEmptyWeight
 
 
 class BWBEmptyWeightTestCase(unittest.TestCase):

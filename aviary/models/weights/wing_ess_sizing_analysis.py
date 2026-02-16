@@ -12,11 +12,11 @@ This provides a complete workflow from data file to analysis results.
 import numpy as np
 import openmdao.api as om
 
-from atlas.utils import DictIndepVarComp
-from atlas.scenarios.setup_mission.load_ac_data import load_ac_data_from_excel
+from aviary.utils.dict_indepvarcomp import DictIndepVarComp
+from aviary.models.aircraft.e180.load_ac_data import load_ac_data_from_excel
 from wing_weight_component import WingWeightComp
 from ess_weight_component import ESSParallelFromMassComp
-from atlas.utils.math.add_subtract_comp import AddSubtractComp
+from aviary.utils.math_components.add_subtract_comp import AddSubtractComp
 
 
 def setup_wing_ess_dv(dv_comp):

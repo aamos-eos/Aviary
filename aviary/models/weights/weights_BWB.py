@@ -18,8 +18,9 @@ import openmdao.api as om
 # ==============================================================================
 # Extension modules
 # ==============================================================================
-from atlas.utils import ElementMultiplyDivideComp, AddSubtractComp
-from atlas.weights.weights_jet_transport import (
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
+from aviary.utils.math_components.add_subtract_comp import AddSubtractComp
+from aviary.models.weights.weights_jet_transport import (
     WingWeight_JetTransport,
     MainLandingGearWeight_JetTransport,
     NoseLandingGearWeight_JetTransport,

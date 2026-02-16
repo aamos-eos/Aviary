@@ -6,25 +6,30 @@ import openmdao.api as om
 import numpy as np
 
 # Import all weight components
-from atlas.weights.fuselage import FuselageMass
-from atlas.weights.windows import WindowsMass
-from atlas.weights.wing import WingWeight
-from atlas.weights.nacelle import NacelleGroup
-from atlas.weights.landing_gear import LandingGearWeight
-from atlas.weights.flight_controls import FlightControlsWeight
-from atlas.weights.empennage import EmpennageGroup
-from atlas.weights.propulsion import PropulsionGroup, FuelInertingWeight, FuelSystemWeight
-from atlas.weights.air_conditioning import AirConditioningWeight
-from atlas.weights.batteries import BatteryWeight
-from atlas.weights.avionics import AvionicsWeight
-from atlas.weights.electrical import ElectricalGroup
-from atlas.weights.payload import PayloadWeight
-from atlas.weights.fuel import FuelWeight
-from atlas.weights.thermal_management import TMSGroup
-from atlas.weights.mechanical_systems import MechanicalSystemsGroup
-from atlas.weights.furnishing import InteriorsWeight, PaintWeight, OperationalItemsWeight
-from atlas.weights.parameter_links import NacelleParameterLinks, WingParameterLinks, FuselageParameterLinks, EMotorPowerLink
-from atlas.utils import ElementMultiplyDivideComp
+from aviary.models.weights.fuselage import FuselageMass
+from aviary.models.weights.windows import WindowsMass
+from aviary.models.weights.wing import WingWeight
+from aviary.models.weights.nacelle import NacelleGroup
+from aviary.models.weights.landing_gear import LandingGearWeight
+from aviary.models.weights.flight_controls import FlightControlsWeight
+from aviary.models.weights.empennage import EmpennageGroup
+from aviary.models.weights.propulsion import PropulsionGroup, FuelInertingWeight, FuelSystemWeight
+from aviary.models.weights.air_conditioning import AirConditioningWeight
+from aviary.models.weights.batteries import BatteryWeight
+from aviary.models.weights.avionics import AvionicsWeight
+from aviary.models.weights.electrical import ElectricalGroup
+from aviary.models.weights.payload import PayloadWeight
+from aviary.models.weights.fuel import FuelWeight
+from aviary.models.weights.thermal_management import TMSGroup
+from aviary.models.weights.mechanical_systems import MechanicalSystemsGroup
+from aviary.models.weights.furnishing import InteriorsWeight, PaintWeight, OperationalItemsWeight
+from aviary.models.weights.parameter_links import (
+    NacelleParameterLinks,
+    WingParameterLinks,
+    FuselageParameterLinks,
+    EMotorPowerLink,
+)
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
 
 class TotalCGCalculator(om.ExplicitComponent):
     """

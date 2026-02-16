@@ -3539,3 +3539,80 @@ def plot_OAS_force_contours(
     if return_ax:
         return c, fig, ax
     return c
+
+
+def plot_atlas_aviary_mission(
+    prob,
+    phases=("climb", "cruise", "descent"),
+    save_plot=False,
+    output_filename="atlas_aviary_mission_profile.png",
+    show_plot=True,
+):
+    """
+    Plot a compact mission summary for the Atlas-integrated Aviary run.
+
+    Parameters
+    ----------
+    prob : openmdao.api.Problem
+        Solved Aviary problem object.
+    phases : tuple[str]
+        Ordered mission phases to stitch together.
+    save_plot : bool
+        If True, save the figure to ``output_filename``.
+    output_filename : str
+        Output image file when ``save_plot`` is True.
+    show_plot : bool
+        If True, display the figure via matplotlib.
+    """
+
+    def _concat(series_name, units=None):
+        chunks = []
+        for phase in phases:
+            val = np.ravel(prob.get_val(f"traj.{phase}.timeseries.{series_name}", units=units))
+            chunks.append(val)
+        return np.concatenate(chunks)
+
+    distance_nm = _concat("distance", units="NM")
+    altitude_ft = _concat("altitude", units="ft")
+    throttle = _concat("throttle", units="unitless")
+    thrust_lbf = _concat("thrust_net_total", units="lbf")
+    fuel_lbmph = _concat("fuel_flow_rate_negative_total", units="lbm/h")
+    elec_kw = _concat("electric_power_in_total", units="kW")
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    fig.suptitle("Atlas Powertrain Aviary Mission")
+
+    axes[0, 0].plot(distance_nm, altitude_ft, color="tab:blue")
+    axes[0, 0].set_ylabel("Altitude (ft)")
+    axes[0, 0].set_xlabel("Distance (NM)")
+    axes[0, 0].grid(True, alpha=0.3)
+
+    axes[0, 1].plot(distance_nm, throttle, color="tab:orange")
+    axes[0, 1].set_ylabel("Throttle (-)")
+    axes[0, 1].set_xlabel("Distance (NM)")
+    axes[0, 1].grid(True, alpha=0.3)
+
+    axes[1, 0].plot(distance_nm, thrust_lbf, color="tab:red")
+    axes[1, 0].set_ylabel("Total Thrust (lbf)")
+    axes[1, 0].set_xlabel("Distance (NM)")
+    axes[1, 0].grid(True, alpha=0.3)
+
+    axes[1, 1].plot(distance_nm, -fuel_lbmph, color="tab:green", label="Fuel burn rate")
+    ax2 = axes[1, 1].twinx()
+    ax2.plot(distance_nm, elec_kw, color="tab:purple", label="Electric power")
+    axes[1, 1].set_ylabel("Fuel Flow (lbm/h)")
+    ax2.set_ylabel("Electric Power (kW)")
+    axes[1, 1].set_xlabel("Distance (NM)")
+    axes[1, 1].grid(True, alpha=0.3)
+
+    fig.tight_layout()
+
+    if save_plot:
+        fig.savefig(output_filename, dpi=150, bbox_inches="tight")
+
+    if show_plot:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return fig

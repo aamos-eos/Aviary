@@ -1,4 +1,4 @@
-from atlas.utils import plot_trajectory, plot_unsteady
+from aviary.visualization.plot_funcs import plot_trajectory, plot_unsteady
 
 
 def show_outputs(nn, prob, mission_config, ac_data, save_plots=False, output_filename="mission_analysis"):

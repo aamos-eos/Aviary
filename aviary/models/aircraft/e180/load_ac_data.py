@@ -1,4 +1,4 @@
-from atlas.weights.wing_geometry_comp import compute_airfoil_pc
+from aviary.models.weights.wing_geometry_comp import compute_airfoil_pc
 
 """
 Aircraft data loading and geometric computation utilities.
@@ -21,7 +21,7 @@ any supported unit system.
 """
 import pandas as pd
 import numpy as np
-from atlas.propulsion.battery.battery_data import BatteryData
+from aviary.models.engines.propulsion.battery.battery_data import BatteryData
 import openmdao.api as om
 
 

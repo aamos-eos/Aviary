@@ -1,7 +1,7 @@
 import unittest
 import openmdao.api as om
 from openmdao.utils.assert_utils import assert_check_partials, assert_near_equal
-from atlas.weights import JetTransportEmptyWeight
+from aviary.models.weights.weights_jet_transport import JetTransportEmptyWeight
 
 
 class JetTransportEmptyWeightTestCase(unittest.TestCase):

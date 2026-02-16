@@ -17,8 +17,8 @@ from matplotlib import cm
 import openmdao.api as om
 
 # Import the OEW setup from compute_oew
-from atlas.weights.compute_oew import OEWGroup
-from atlas.weights.wing_geometry_comp import WingGeometryComp
+from aviary.models.weights.compute_oew import OEWGroup
+from aviary.models.weights.wing_geometry_comp import WingGeometryComp
 
 
 def setup_oew_problem():
@@ -199,8 +199,8 @@ def setup_oew_problem():
     model.connect('vstab_c2_sweep', 'empennage.vertical_tail.c2_sweep')
     
     # Add Payload and Fuel (needed for complete problem)
-    from atlas.weights.payload import PayloadWeight
-    from atlas.weights.fuel import FuelWeight
+    from aviary.models.weights.payload import PayloadWeight
+    from aviary.models.weights.fuel import FuelWeight
     
     model.add_subsystem('payload', PayloadWeight(), promotes_inputs=['*'],
                        promotes_outputs=['payload_weight', 'cg_passenger', 'passenger_weight', 

@@ -1,6 +1,7 @@
 import numpy as np
 import openmdao.api as om
-from atlas.utils.math import AddSubtractComp, ElementMultiplyDivideComp
+from aviary.utils.math_components.add_subtract_comp import AddSubtractComp
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
 
 
 class JetTransportEmptyWeight(om.Group):

@@ -1,4 +1,4 @@
-from atlas.utils import plot_trajectory
+from aviary.visualization.plot_funcs import plot_trajectory
 
 
 def show_outputs(nn, prob, mission_config,  save_plots=False, output_filename="mission_analysis"):

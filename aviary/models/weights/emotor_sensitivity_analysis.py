@@ -22,11 +22,11 @@ import openmdao.api as om
 # Add paths for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
-from atlas.utils import DictIndepVarComp
-from atlas.scenarios.setup_mission.load_ac_data import load_ac_data_from_excel
-from atlas.scenarios.setup_mission.setup_ac_dvcomp import setup_ac_dv
-from atlas.weights.compute_oew import OEWGroup
-from atlas.weights.oew_analysis import connect_oew_inputs
+from aviary.utils.dict_indepvarcomp import DictIndepVarComp
+from aviary.models.aircraft.e180.load_ac_data import load_ac_data_from_excel
+from aviary.models.aircraft.e180.setup_ac_dvcomp import setup_ac_dv
+from aviary.models.weights.compute_oew import OEWGroup
+from aviary.models.weights.oew_analysis import connect_oew_inputs
 
 
 def run_emotor_sensitivity(

@@ -1,5 +1,6 @@
 from openmdao.api import IndepVarComp, Group
-from atlas.utils import AddSubtractComp, ElementMultiplyDivideComp
+from aviary.utils.math_components.add_subtract_comp import AddSubtractComp
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
 from .weights_turboprop import (
     WingWeight_SmallTurboprop,
     EmpennageWeight_SmallTurboprop,

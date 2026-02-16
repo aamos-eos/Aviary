@@ -1,7 +1,8 @@
 import numpy as np
 from openmdao.api import ExplicitComponent, IndepVarComp
 from openmdao.api import Group
-from atlas.utils import AddSubtractComp, ElementMultiplyDivideComp
+from aviary.utils.math_components.add_subtract_comp import AddSubtractComp
+from aviary.utils.math_components.multiply_divide_comp import ElementMultiplyDivideComp
 import math
 
 # TODO: add fuel system weight back in (depends on Wf, which depends on MTOW and We, and We depends on fuel system weight)

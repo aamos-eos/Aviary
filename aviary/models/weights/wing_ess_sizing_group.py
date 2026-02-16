@@ -13,11 +13,9 @@ and the ESS can use whatever mass is left after accounting for the wing weight.
 import numpy as np
 import openmdao.api as om
 
-from atlas.weights.wing_weight_component import WingWeightComp
-from atlas.weights.ess_weight_component import ESSParallelFromMassComp
-from atlas.utils.math.add_subtract_comp import AddSubtractComp
-from atlas.propulsion.battery.battery_data import BatteryData
-from atlas.weights.wingWeightCalc2 import wingWeightCalc
+from aviary.models.weights.ess_weight_component import ESSParallelFromMassComp
+from aviary.utils.math_components.add_subtract_comp import AddSubtractComp
+from aviary.models.engines.propulsion.battery.battery_data import BatteryData
 
 
 class WingESSSizingGroup(om.Group):
