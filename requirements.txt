@@ -1,0 +1,37 @@
+# Core dependencies from setup.py
+numpy==1.26.0
+scipy
+openmdao[all]<=3.38
+# Note: jax, jaxlib, and ml-dtypes installed via conda to match local environment
+
+# Additional dependencies found in the codebase
+pandas
+matplotlib
+pathlib
+scikit-learn
+openpyxl
+jax==0.6.2
+jaxlib==0.6.2
+
+
+#For testing and development
+pytest
+pytest-cov
+pytest-html
+coverage
+parameterized
+
+# Documentation dependencies
+sphinx-mdolab-theme
+
+# Optional: OpenAeroStruct (commented out as it's optional)
+# openaerostruct<=2.7.1
+
+# Custom local packages - these need to be installed separately
+# apolo: Install from local directory
+# atlas: Install from local directory
+
+# Installation instructions for custom packages:
+# 1. For apolo: cd models/apolo && pip install -e .
+# 2. For atlas: cd models/atlas && pip install -e .
+# 3. For pytorch: pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 
